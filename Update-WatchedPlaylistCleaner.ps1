@@ -6,9 +6,9 @@
 
 $pluginName = "WatchedPlaylistCleaner"
 $dllUrl = "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll"
-$pluginsFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins"
-$dllPath = Join-Path $pluginsFolder "$pluginName.dll"
-$backupPath = Join-Path $pluginsFolder "$pluginName.dll.backup"
+$pluginsFolder = "$env:APPDATA\Emby-Server\programdata\plugins"
+$dllPath = "$pluginsFolder\$pluginName.dll"
+$backupPath = "$pluginsFolder\$pluginName.dll.backup"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
@@ -25,16 +25,24 @@ if (-not (Test-Path $dllPath)) {
     exit
 }
 
-# Step 1 - Stop Emby Server
+# Step 1 - Stop ALL Emby related processes
 Write-Host "Step 1: Stopping Emby Server..." -ForegroundColor Yellow
-$embyProcess = Get-Process -Name "EmbyServer" -ErrorAction SilentlyContinue
-if ($embyProcess) {
-    Stop-Process -Name "EmbyServer" -Force
-    Start-Sleep -Seconds 3
-    Write-Host "         Emby Server stopped." -ForegroundColor Green
-} else {
-    Write-Host "         Emby Server was not running." -ForegroundColor Green
+$embyProcessNames = @("EmbyServer", "embytray")
+foreach ($procName in $embyProcessNames) {
+    $proc = Get-Process -Name $procName -ErrorAction SilentlyContinue
+    if ($proc) {
+        Stop-Process -Name $procName -Force
+        Write-Host "         Stopped process: $procName" -ForegroundColor Green
+    }
 }
+Start-Sleep -Seconds 5
+
+$remaining = Get-Process | Where-Object { $_.Name -like "*emby*" -or $_.Name -like "*Emby*" }
+if ($remaining) {
+    $remaining | Stop-Process -Force
+}
+Start-Sleep -Seconds 2
+Write-Host "         Emby Server stopped." -ForegroundColor Green
 
 # Step 2 - Back up existing DLL
 Write-Host "Step 2: Backing up existing plugin..." -ForegroundColor Yellow
@@ -42,10 +50,15 @@ Copy-Item -Path $dllPath -Destination $backupPath -Force
 Write-Host "         Backup created." -ForegroundColor Green
 
 # Step 3 - Download the new DLL
-Write-Host "Step 3: Downloading latest version..." -ForegroundColor Yellow
+Write-Host "Step 3: Downloading latest version to $dllPath ..." -ForegroundColor Yellow
 try {
-    Invoke-WebRequest -Uri $dllUrl -OutFile $dllPath
-    Write-Host "         Latest version downloaded." -ForegroundColor Green
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri $dllUrl -OutFile $dllPath -UseBasicParsing
+    if (Test-Path $dllPath) {
+        Write-Host "         Latest version downloaded successfully." -ForegroundColor Green
+    } else {
+        throw "File not found after download"
+    }
 } catch {
     Write-Host "         ERROR: Could not download update." -ForegroundColor Red
     Write-Host "         Restoring previous version..." -ForegroundColor Yellow
@@ -61,12 +74,12 @@ Remove-Item $backupPath -Force
 
 # Step 5 - Start Emby Server
 Write-Host "Step 4: Starting Emby Server..." -ForegroundColor Yellow
-$embyExe = Join-Path $env:APPDATA "Emby-Server\system\EmbyServer.exe"
+$embyExe = "$env:APPDATA\Emby-Server\system\EmbyServer.exe"
 if (Test-Path $embyExe) {
     Start-Process $embyExe
     Write-Host "         Emby Server started." -ForegroundColor Green
 } else {
-    Write-Host "         Could not find Emby Server executable." -ForegroundColor Red
+    Write-Host "         Could not find Emby Server at: $embyExe" -ForegroundColor Red
     Write-Host "         Please start Emby Server manually." -ForegroundColor Yellow
 }
 
