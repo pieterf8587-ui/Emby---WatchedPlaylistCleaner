@@ -1,0 +1,20 @@
+[
+  {
+    "guid": "a3f1e2d4-5b6c-7890-abcd-ef1234567890",
+    "name": "Watched Playlist Cleaner",
+    "description": "Automatically sorts your playlists by watched status. Unwatched items appear first sorted by release date, watched items move to the bottom. Triggers automatically when items are marked as watched or unplayed.",
+    "overview": "Automatically sorts your playlists by watched status. Unwatched items appear first sorted by release date, watched items move to the bottom.",
+    "owner": "pieterf8587-ui",
+    "category": "General",
+    "versions": [
+      {
+        "version": "0.9.1.4",
+        "changelog": "Initial release. Automatically sorts playlists by watched status per user. Triggers on watched/unplayed toggle, playback completion, and playlist changes.",
+        "targetAbi": "4.8.0.0",
+        "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
+        "checksum": "8EEE91D67B8D29370E82C6064D5642FD",
+        "timestamp": "2026-05-09T00:00:00Z"
+      }
+    ]
+  }
+]
