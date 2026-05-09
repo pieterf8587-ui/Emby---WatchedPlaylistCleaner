@@ -9,11 +9,11 @@
     "imageUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/thumb.png",
     "versions": [
       {
-        "version": "0.9.1.5",
-        "changelog": "Improved logging — version logged on startup, stack traces on errors, warnings for missing library items and release dates, log file rotation at 5MB, reduced noise in main Emby log.",
+        "version": "0.9.1.6",
+        "changelog": "Fix sort order for streaming episodes with identical release dates — now uses season and episode number as tiebreakers.",
         "targetAbi": "4.8.0.0",
         "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
-        "checksum": "C45126434FEF8F7E0A84DE69ED10938D",
+        "checksum": "1E946E38AD95DF8921199B0FC4247817",
         "timestamp": "2026-05-09T00:00:00Z"
       }
     ]
