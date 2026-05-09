@@ -177,7 +177,7 @@ Run the scheduled task manually from **Dashboard → Scheduled Tasks → Clean W
 
 ## Version
 
-Current version: **0.9.1.9**
+Current version: **0.9.2.0**
 
 ---
 
