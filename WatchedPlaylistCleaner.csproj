@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <AssemblyName>WatchedPlaylistCleaner</AssemblyName>
+    <RootNamespace>WatchedPlaylistCleaner</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Optimize>true</Optimize>
+    <Version>0.9.1.3</Version>
+    <AssemblyVersion>0.9.1.3</AssemblyVersion>
+    <FileVersion>0.9.1.3</FileVersion>
+  </PropertyGroup>
+
+  <!--
+    ============================================================
+    IMPORTANT: Update the EmbyPath below to match where Emby
+    is installed on YOUR computer.
+
+    Windows default : C:\Program Files\Emby-Server\system
+    Linux default   : /opt/emby-server/system
+    macOS default   : /Applications/Emby Server.app/Contents/MacOS
+    ============================================================
+  -->
+  <PropertyGroup>
+    <EmbyPath>C:\Users\Pieter\AppData\Roaming\Emby-Server\system</EmbyPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- These DLLs come from your Emby installation — do NOT copy them into the plugin folder -->
+    <Reference Include="MediaBrowser.Common">
+      <HintPath>$(EmbyPath)\MediaBrowser.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MediaBrowser.Controller">
+      <HintPath>$(EmbyPath)\MediaBrowser.Controller.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MediaBrowser.Model">
+      <HintPath>$(EmbyPath)\MediaBrowser.Model.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
