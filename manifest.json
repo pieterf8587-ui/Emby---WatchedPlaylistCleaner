@@ -8,11 +8,11 @@
     "category": "General",
     "versions": [
       {
-        "version": "0.9.1.4",
-        "changelog": "Initial release. Automatically sorts playlists by watched status per user. Triggers on watched/unplayed toggle, playback completion, and playlist changes.",
+        "version": "0.9.1.5",
+        "changelog": "Improved logging — version logged on startup, stack traces on errors, warnings for missing library items and release dates, log file rotation at 5MB, reduced noise in main Emby log.",
         "targetAbi": "4.8.0.0",
         "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
-        "checksum": "8EEE91D67B8D29370E82C6064D5642FD",
+        "checksum": "C45126434FEF8F7E0A84DE69ED10938D",
         "timestamp": "2026-05-09T00:00:00Z"
       }
     ]
