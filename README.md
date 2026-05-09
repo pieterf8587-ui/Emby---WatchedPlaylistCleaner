@@ -1,42 +1,149 @@
 # Watched Playlist Cleaner — Emby Plugin
 
-Automatically sorts your Emby playlists so that unwatched items always appear first, sorted by release date. Watched items move to the bottom. Works per user, triggers automatically when items are watched, unplayed, or added to a playlist.
+Automatically sorts your Emby playlists so that unwatched items always appear first, sorted by release date. Watched items move to the bottom. Each user's playlist is sorted independently based on their own watch history.
+
+---
 
 ## Features
-- Unwatched items at the top, sorted by release date
-- Watched items move to the bottom automatically
-- Triggers when an episode or movie is marked as watched or unplayed
-- Triggers when playback finishes on any Emby client
-- Triggers when new items are added to a playlist
-- Each user's playlist is sorted independently based on their own watch history
-- Nightly scheduled task as a safety net
+
+- **Unwatched items at the top** — sorted by release date, oldest first
+- **Watched items at the bottom** — sorted by release date, oldest first
+- **Per-user sorting** — each user's playlist is sorted based only on their own watched status
+- **Season and episode tiebreaking** — for streaming content where all episodes share the same release date, sort order falls back to season and episode number
+- **Automatic triggers** — sorts immediately when an item is marked as watched or unplayed, when playback finishes on any Emby client, or when items are added to a playlist
+- **Nightly scheduled task** — runs at 3 AM as a safety net to catch anything missed
+- **Original playlists are never deleted** — only the sort order is changed
+
+---
 
 ## Requirements
-- Emby Server running .NET 8
+
 - Windows
+- Emby Server running .NET 8
 
-## Installation
-1. Download `Install-WatchedPlaylistCleaner.ps1`
-2. Right-click it and select **Run with PowerShell**
-3. The script will automatically install the plugin and restart Emby
+---
 
-## Updating
-1. Download `Update-WatchedPlaylistCleaner.ps1`
-2. Right-click it and select **Run with PowerShell**
-3. The script will automatically update the plugin and restart Emby
+## Installation and Updates
+
+Download and double-click **`WatchedPlaylistCleaner-Setup.bat`** from this repository.
+
+The script will automatically:
+- Check whether the plugin is already installed
+- Compare your installed version against the latest version on GitHub
+- Install or update as needed
+- Stop and restart Emby Server
+
+### What the setup script does — step by step
+
+For transparency, here is exactly what the script does so you can verify it before running it:
+
+1. Fetches the latest version number from the `manifest.json` file in this repository
+2. Checks whether `WatchedPlaylistCleaner.dll` exists in your Emby plugins folder
+3. If not installed — downloads and installs the plugin
+4. If already installed — compares version numbers:
+   - **Same version** → does nothing, displays "already on latest version"
+   - **GitHub is newer** → downloads and installs the update
+   - **Your version is newer** → does nothing, displays "newer version already installed"
+5. Stops the `EmbyServer` and `embytray` processes before making any changes
+6. Downloads `WatchedPlaylistCleaner.dll` directly from this GitHub repository into your Emby plugins folder at:
+   `%APPDATA%\Emby-Server\programdata\plugins\`
+7. Restarts Emby Server
+
+> **Note:** Windows may show a SmartScreen warning when running the `.bat` file for the first time since it was downloaded from the internet. Click **"Run anyway"** to proceed — the script only touches your Emby plugins folder and Emby processes.
+
+---
 
 ## Manual Installation
+
 If you prefer to install manually:
-1. Download `WatchedPlaylistCleaner.dll`
-2. Create a folder called `WatchedPlaylistCleaner` inside:
-   `C:\Users\[your username]\AppData\Roaming\Emby-Server\plugins\`
-3. Copy the DLL into that folder
-4. Restart Emby Server
+
+1. Download `WatchedPlaylistCleaner.dll` from this repository
+2. Stop Emby Server
+3. Copy the DLL into:
+   ```
+   C:\Users\[your username]\AppData\Roaming\Emby-Server\programdata\plugins\
+   ```
+4. Start Emby Server
+5. Go to **Dashboard → Plugins** to confirm it appears
+
+---
+
+## First Run
+
+After installing, run the scheduled task once to sort any playlists that existed before the plugin was installed:
+
+1. Go to **Dashboard → Scheduled Tasks**
+2. Find **"Clean Watched Items from Playlists"**
+3. Click the **Run (▶)** button
+
+---
+
+## How Sorting Works
+
+The plugin sorts each playlist in this order:
+
+| Priority | Rule |
+|----------|------|
+| 1st | Unwatched items before watched items |
+| 2nd | Oldest release date first within each group |
+| 3rd | Season number (tiebreaker for same release date) |
+| 4th | Episode number (tiebreaker for same season) |
+
+Movies are sorted by release date only — season and episode numbers do not apply.
+
+---
+
+## Compatibility
+
+| Emby Version | .NET Version | Status |
+|---|---|---|
+| 4.9.x (2025+) | .NET 8 | ✅ Supported |
+| 4.7.x / 4.8.x | .NET 6 | ⚠️ Requires code change — see below |
+| Below 4.7 | .NET 5 or earlier | ⚠️ Not supported |
+
+To run on an older Emby version, change `<TargetFramework>net8.0</TargetFramework>` to `net6.0` in `WatchedPlaylistCleaner.csproj` and rebuild.
+
+To check your Emby version: **Dashboard → About**.
+
+---
+
+## Uninstalling
+
+1. Stop Emby Server
+2. Delete `WatchedPlaylistCleaner.dll` from:
+   ```
+   C:\Users\[your username]\AppData\Roaming\Emby-Server\programdata\plugins\
+   ```
+3. Start Emby Server
+
+---
+
+## FAQ
+
+**Q: Does it modify my original playlists permanently?**
+Yes — the sort order of the M3U playlist file on disk is updated. Your original playlists are never deleted, only reordered. You can always manually reorder items in Emby if needed.
+
+**Q: What happens if I mark something as unwatched?**
+The plugin detects the change and immediately moves the item back to the top of the unwatched section, sorted by its release date.
+
+**Q: Will one user's watch history affect another user's playlist?**
+No. Each user's playlist is sorted independently based only on their own watched status.
+
+**Q: Does it work with movies and TV shows in the same playlist?**
+Yes. Movies sort by release date. TV episodes sort by release date, then season, then episode number.
+
+**Q: The plugin is installed but I don't see any sorting happening.**
+Run the scheduled task manually from **Dashboard → Scheduled Tasks → Clean Watched Items from Playlists**. Also check the debug log at:
+`%APPDATA%\Emby-Server\logs\WatchedPlaylistCleaner_debug.txt`
+
+---
 
 ## Version
-Current version: 0.9.1.7
 
+Current version: **0.9.1.7**
 
+---
 
+## License
 
-
+MIT License — see [LICENSE](LICENSE) for details.
