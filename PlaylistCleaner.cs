@@ -62,7 +62,7 @@ namespace WatchedPlaylistCleaner
             if (isError)
                 _logger.Error(message);
             else
-                _logger.Info(message);
+                _logger.Debug(message);
         }
 
         private void LogWarning(string message)
