@@ -204,6 +204,8 @@ namespace WatchedPlaylistCleaner
 
                     bool isWatched = false;
                     DateTimeOffset releaseDate = DateTimeOffset.MinValue;
+                    int seasonNumber = 0;
+                    int episodeNumber = 0;
 
                     if (libraryItem == null)
                     {
@@ -224,13 +226,23 @@ namespace WatchedPlaylistCleaner
                             missingDateCount++;
                             _logger.Debug($"[WatchedPlaylistCleaner] No release date for '{entry.Title}' — will sort to top of its group");
                         }
+
+                        // For TV episodes, use season and episode number as tiebreakers
+                        // when release dates are identical (common with streaming releases)
+                        if (libraryItem is MediaBrowser.Controller.Entities.TV.Episode episode)
+                        {
+                            seasonNumber = episode.ParentIndexNumber ?? 0;
+                            episodeNumber = episode.IndexNumber ?? 0;
+                        }
                     }
 
                     resolved.Add(new ResolvedEntry
                     {
                         Entry = entry,
                         IsWatched = isWatched,
-                        ReleaseDate = releaseDate
+                        ReleaseDate = releaseDate,
+                        SeasonNumber = seasonNumber,
+                        EpisodeNumber = episodeNumber
                     });
                 }
 
@@ -244,6 +256,8 @@ namespace WatchedPlaylistCleaner
                 var sorted = resolved
                     .OrderBy(r => r.IsWatched ? 1 : 0)
                     .ThenBy(r => r.ReleaseDate)
+                    .ThenBy(r => r.SeasonNumber)
+                    .ThenBy(r => r.EpisodeNumber)
                     .Select(r => r.Entry)
                     .ToList();
 
@@ -366,6 +380,8 @@ namespace WatchedPlaylistCleaner
             public M3UEntry Entry { get; set; } = new();
             public bool IsWatched { get; set; }
             public DateTimeOffset ReleaseDate { get; set; }
+            public int SeasonNumber { get; set; } = 0;
+            public int EpisodeNumber { get; set; } = 0;
         }
     }
 }
