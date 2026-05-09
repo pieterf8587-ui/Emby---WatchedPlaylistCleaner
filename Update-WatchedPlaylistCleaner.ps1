@@ -6,7 +6,7 @@
 
 $pluginName = "WatchedPlaylistCleaner"
 $dllUrl = "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll"
-$pluginFolder = Join-Path $env:APPDATA "Emby-Server\plugins\$pluginName"
+$pluginFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins\$pluginName"
 $dllPath = Join-Path $pluginFolder "$pluginName.dll"
 $backupPath = Join-Path $pluginFolder "$pluginName.dll.backup"
 
