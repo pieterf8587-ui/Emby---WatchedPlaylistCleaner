@@ -6,6 +6,7 @@
     "overview": "Automatically sorts your playlists by watched status. Unwatched items appear first sorted by release date, watched items move to the bottom.",
     "owner": "pieterf8587-ui",
     "category": "General",
+    "imageUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/thumb.png",
     "versions": [
       {
         "version": "0.9.1.5",
