@@ -34,7 +34,7 @@ If you prefer to install manually:
 4. Restart Emby Server
 
 ## Version
-Current version: 0.9.1.5
+Current version: 0.9.1.6
 
 
 
