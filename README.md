@@ -4,6 +4,18 @@ Automatically sorts your Emby playlists so that unwatched items always appear fi
 
 ---
 
+## Background and Inspiration
+
+Emby is excellent for managing personal media libraries, but it has a significant limitation when watching content that spans multiple series and seasons within the same shared universe — such as the **Marvel Defenders Saga**, which weaves together Daredevil, Jessica Jones, Luke Cage, Iron Fist, The Defenders, The Punisher, Hawkeye, Echo, and Daredevil: Born Again across dozens of seasons in a specific intended viewing order.
+
+The problem is that Emby treats each series independently. When you finish the last episode of one show, Emby's "Continue Watching" section will suggest the next episode of that same series rather than the next show in the correct cross-series viewing order. There is also no native way to track your progress through a hand-curated cross-series playlist — watched episodes remain mixed in with unwatched ones, making it difficult to know where you are.
+
+This plugin was built specifically to address that limitation. By maintaining playlists sorted with unwatched content at the top and watched content at the bottom — respecting both release date order and season/episode sequencing — it gives you a clear, always up-to-date view of exactly where you are in any multi-series viewing journey, regardless of how many shows and seasons are involved.
+
+While inspired by the Marvel Defenders Saga, the plugin works for any cross-series playlist — whether that's the DC Arrowverse, the Star Wars timeline, James Bond films in release order, or any other universe you want to watch in a specific sequence.
+
+---
+
 ## Features
 
 - **Unwatched items at the top** — sorted by release date, oldest first
