@@ -84,26 +84,26 @@ If you prefer to install manually:
 
 The plugin will only sort playlists that you explicitly opt in to. This protects any playlists you have carefully curated and don't want automatically reordered.
 
-On first run, the plugin creates a config file at:
+**Option 1 — Via the Emby Dashboard (recommended)**
+
+1. Go to **Dashboard → Plugins**
+2. Click the **three dots (⋯)** next to Watched Playlist Cleaner
+3. Click **Settings**
+4. Move playlists between **Available** and **Managed** using the **+ Manage** and **✕ Remove** buttons
+5. Click **Save**
+
+**Option 2 — Via the config text file (fallback)**
+
+If the dashboard settings page is not available, the plugin will fall back to reading from a text file at:
 ```
 C:\Users\[your username]\AppData\Roaming\Emby-Server\programdata\plugins\WatchedPlaylistCleaner.config
 ```
 
-Open this file in Notepad and add the exact name of each playlist you want the plugin to manage, one per line:
+Open this file in Notepad and add your playlist names one per line.
 
-```
-# WatchedPlaylistCleaner - Managed Playlists
-# Add the exact name of each playlist you want sorted, one per line.
-# Lines starting with # are comments and are ignored.
+> **Important:** Playlist names are case-sensitive and must match exactly as they appear in Emby. Any playlist not listed will be left completely untouched.
 
-Marvels Defenders Saga
-James Bond
-Mission Impossible
-```
-
-> **Important:** Playlist names are case-sensitive and must match exactly as they appear in Emby. Any playlist not listed in this file will be left completely untouched.
-
-Changes to the config file take effect the next time the plugin runs — no restart needed.
+Changes take effect immediately — no restart needed.
 
 ---
 
@@ -177,7 +177,7 @@ Run the scheduled task manually from **Dashboard → Scheduled Tasks → Clean W
 
 ## Version
 
-Current version: **0.9.1.8**
+Current version: **0.9.1.9**
 
 ---
 
