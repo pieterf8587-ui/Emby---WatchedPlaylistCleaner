@@ -6,9 +6,9 @@
 
 $pluginName = "WatchedPlaylistCleaner"
 $dllUrl = "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll"
-$pluginFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins\$pluginName"
-$dllPath = Join-Path $pluginFolder "$pluginName.dll"
-$backupPath = Join-Path $pluginFolder "$pluginName.dll.backup"
+$pluginsFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins"
+$dllPath = Join-Path $pluginsFolder "$pluginName.dll"
+$backupPath = Join-Path $pluginsFolder "$pluginName.dll.backup"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
@@ -17,8 +17,8 @@ Write-Host "============================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Check plugin is already installed
-if (-not (Test-Path $pluginFolder)) {
-    Write-Host "Plugin folder not found." -ForegroundColor Red
+if (-not (Test-Path $dllPath)) {
+    Write-Host "Plugin not found at: $dllPath" -ForegroundColor Red
     Write-Host "Please run the Installer first." -ForegroundColor Yellow
     Write-Host ""
     Read-Host "Press Enter to exit"
@@ -38,12 +38,8 @@ if ($embyProcess) {
 
 # Step 2 - Back up existing DLL
 Write-Host "Step 2: Backing up existing plugin..." -ForegroundColor Yellow
-if (Test-Path $dllPath) {
-    Copy-Item -Path $dllPath -Destination $backupPath -Force
-    Write-Host "         Backup created." -ForegroundColor Green
-} else {
-    Write-Host "         No existing plugin found — fresh install." -ForegroundColor Yellow
-}
+Copy-Item -Path $dllPath -Destination $backupPath -Force
+Write-Host "         Backup created." -ForegroundColor Green
 
 # Step 3 - Download the new DLL
 Write-Host "Step 3: Downloading latest version..." -ForegroundColor Yellow
@@ -53,21 +49,15 @@ try {
 } catch {
     Write-Host "         ERROR: Could not download update." -ForegroundColor Red
     Write-Host "         Restoring previous version..." -ForegroundColor Yellow
-
-    if (Test-Path $backupPath) {
-        Copy-Item -Path $backupPath -Destination $dllPath -Force
-        Write-Host "         Previous version restored." -ForegroundColor Green
-    }
-
+    Copy-Item -Path $backupPath -Destination $dllPath -Force
+    Write-Host "         Previous version restored." -ForegroundColor Green
     Write-Host ""
     Read-Host "Press Enter to exit"
     exit
 }
 
 # Step 4 - Remove backup
-if (Test-Path $backupPath) {
-    Remove-Item $backupPath -Force
-}
+Remove-Item $backupPath -Force
 
 # Step 5 - Start Emby Server
 Write-Host "Step 4: Starting Emby Server..." -ForegroundColor Yellow

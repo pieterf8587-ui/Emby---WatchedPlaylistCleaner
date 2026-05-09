@@ -6,8 +6,8 @@
 
 $pluginName = "WatchedPlaylistCleaner"
 $dllUrl = "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll"
-$pluginFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins\$pluginName"
-$dllPath = Join-Path $pluginFolder "$pluginName.dll"
+$pluginsFolder = Join-Path $env:APPDATA "Emby-Server\programdata\plugins"
+$dllPath = Join-Path $pluginsFolder "$pluginName.dll"
 
 Write-Host ""
 Write-Host "============================================" -ForegroundColor Cyan
@@ -26,14 +26,16 @@ if ($embyProcess) {
     Write-Host "         Emby Server was not running." -ForegroundColor Green
 }
 
-# Step 2 - Create plugin folder
-Write-Host "Step 2: Creating plugin folder..." -ForegroundColor Yellow
-if (-not (Test-Path $pluginFolder)) {
-    New-Item -ItemType Directory -Path $pluginFolder | Out-Null
-    Write-Host "         Folder created: $pluginFolder" -ForegroundColor Green
-} else {
-    Write-Host "         Folder already exists." -ForegroundColor Green
+# Step 2 - Verify plugins folder exists
+Write-Host "Step 2: Locating plugins folder..." -ForegroundColor Yellow
+if (-not (Test-Path $pluginsFolder)) {
+    Write-Host "         ERROR: Plugins folder not found at: $pluginsFolder" -ForegroundColor Red
+    Write-Host "         Please ensure Emby Server is installed and has been run at least once." -ForegroundColor Yellow
+    Write-Host ""
+    Read-Host "Press Enter to exit"
+    exit
 }
+Write-Host "         Plugins folder found." -ForegroundColor Green
 
 # Step 3 - Download the DLL
 Write-Host "Step 3: Downloading plugin..." -ForegroundColor Yellow
