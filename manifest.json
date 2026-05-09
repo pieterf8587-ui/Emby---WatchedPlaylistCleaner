@@ -9,11 +9,11 @@
     "imageUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/thumb.png",
     "versions": [
       {
-        "version": "0.9.1.8",
-        "changelog": "Add config file to control which playlists are managed by the plugin. Playlists not listed in the config file are left untouched.",
+        "version": "0.9.1.9",
+        "changelog": "Add dashboard configuration page — select managed playlists via a two-column UI instead of editing a text file.",
         "targetAbi": "4.8.0.0",
         "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
-        "checksum": "E6AECCDBB25BE137B0CFF30F94198ED9",
+        "checksum": "8A8391A336FDC2478407D2566A139A7E",
         "timestamp": "2026-05-09T00:00:00Z"
       }
     ]
