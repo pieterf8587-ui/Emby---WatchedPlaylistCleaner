@@ -31,11 +31,50 @@ namespace WatchedPlaylistCleaner
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Emby-Server", "logs", "WatchedPlaylistCleaner_debug.txt");
 
-        private void Log(string message)
+        // Maximum debug log size before it is trimmed (5 MB)
+        private const long MaxLogBytes = 5 * 1024 * 1024;
+
+        private void Log(string message, bool isError = false)
         {
             var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}";
+
+            try
+            {
+                // Rotate log if it exceeds the size limit
+                var fi = new FileInfo(DebugLog);
+                if (fi.Exists && fi.Length > MaxLogBytes)
+                {
+                    // Keep the last half of the file and append a rotation notice
+                    var content = File.ReadAllText(DebugLog);
+                    var half = content.Substring(content.Length / 2);
+                    var rotationNotice = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [Log rotated — previous entries trimmed to keep file under {MaxLogBytes / 1024 / 1024} MB]{Environment.NewLine}";
+                    File.WriteAllText(DebugLog, rotationNotice + half);
+                }
+
+                File.AppendAllText(DebugLog, line);
+            }
+            catch { }
+
+            if (isError)
+                _logger.Error(message);
+            else
+                _logger.Info(message);
+        }
+
+        private void LogWarning(string message)
+        {
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [WARN] {message}{Environment.NewLine}";
             try { File.AppendAllText(DebugLog, line); } catch { }
-            _logger.Info(message);
+            _logger.Warn(message);
+        }
+
+        private void LogError(string message, Exception ex)
+        {
+            var line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [ERROR] {message}{Environment.NewLine}" +
+                       $"  Exception: {ex.Message}{Environment.NewLine}" +
+                       $"  StackTrace: {ex.StackTrace}{Environment.NewLine}";
+            try { File.AppendAllText(DebugLog, line); } catch { }
+            _logger.ErrorException(message, ex);
         }
 
         public PlaylistCleaner(
@@ -57,7 +96,6 @@ namespace WatchedPlaylistCleaner
 
         // -----------------------------------------------------------------------
         // Called by the event listener — only resorts the triggering user's playlists
-        // using only that user's watched status
         // -----------------------------------------------------------------------
         public async Task RemoveWatchedItemFromAllPlaylists(
             BaseItem item,
@@ -67,7 +105,7 @@ namespace WatchedPlaylistCleaner
             var user = _userManager.GetUserById(userId);
             if (user == null)
             {
-                Log($"Could not find user with ID {userId}");
+                LogWarning($"Could not find user with ID {userId} — skipping resort");
                 return;
             }
 
@@ -91,6 +129,9 @@ namespace WatchedPlaylistCleaner
             CancellationToken cancellationToken)
         {
             Log("=== Scheduled playlist reorder started ===");
+
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            Log($"Plugin version: {version}");
 
             var users = _userManager.GetUserList(new UserQuery());
             Log($"Found {users.Length} user(s)");
@@ -119,10 +160,6 @@ namespace WatchedPlaylistCleaner
         // Private helpers
         // -----------------------------------------------------------------------
 
-        /// <summary>
-        /// Gets the M3U playlist files that belong to a specific user by querying
-        /// Emby's playlist library filtered by user, then resolving to file paths.
-        /// </summary>
         private List<string> GetPlaylistsForUser(User user)
         {
             var query = new InternalItemsQuery
@@ -143,12 +180,6 @@ namespace WatchedPlaylistCleaner
             return paths;
         }
 
-        /// <summary>
-        /// Sorts a playlist M3U file for a specific user:
-        ///   - Unwatched items first, sorted by release date ascending
-        ///   - Watched items last, sorted by release date ascending
-        /// Only that user's watched status is considered.
-        /// </summary>
         private async Task ReorderPlaylistForUser(string m3uPath, User user)
         {
             try
@@ -156,7 +187,15 @@ namespace WatchedPlaylistCleaner
                 var entries = ParseM3U(m3uPath);
                 Log($"  '{Path.GetFileName(m3uPath)}': parsed {entries.Count} entries for user '{user.Name}'");
 
+                if (entries.Count == 0)
+                {
+                    LogWarning($"  '{Path.GetFileName(m3uPath)}' is empty or could not be parsed — skipping");
+                    return;
+                }
+
                 var resolved = new List<ResolvedEntry>();
+                int notFoundCount = 0;
+                int missingDateCount = 0;
 
                 foreach (var entry in entries)
                 {
@@ -166,11 +205,25 @@ namespace WatchedPlaylistCleaner
                     bool isWatched = false;
                     DateTimeOffset releaseDate = DateTimeOffset.MinValue;
 
-                    if (libraryItem != null)
+                    if (libraryItem == null)
                     {
-                        // Only check THIS user's watched status
+                        // Item not found in library — treat as unwatched and warn
+                        notFoundCount++;
+                        _logger.Debug($"[WatchedPlaylistCleaner] Item not found in library: '{entry.Title}' | Path: {absolutePath}");
+                    }
+                    else
+                    {
                         isWatched = _userDataManager.GetUserData(user, libraryItem)?.Played == true;
-                        releaseDate = libraryItem.PremiereDate ?? DateTimeOffset.MinValue;
+
+                        if (libraryItem.PremiereDate.HasValue)
+                        {
+                            releaseDate = libraryItem.PremiereDate.Value;
+                        }
+                        else
+                        {
+                            missingDateCount++;
+                            _logger.Debug($"[WatchedPlaylistCleaner] No release date for '{entry.Title}' — will sort to top of its group");
+                        }
                     }
 
                     resolved.Add(new ResolvedEntry
@@ -180,6 +233,13 @@ namespace WatchedPlaylistCleaner
                         ReleaseDate = releaseDate
                     });
                 }
+
+                // Log summary warnings rather than per-item to keep log readable
+                if (notFoundCount > 0)
+                    LogWarning($"  {notFoundCount} item(s) in '{Path.GetFileName(m3uPath)}' could not be found in the Emby library — treated as unwatched");
+
+                if (missingDateCount > 0)
+                    LogWarning($"  {missingDateCount} item(s) in '{Path.GetFileName(m3uPath)}' have no release date — sorted to top of their group");
 
                 var sorted = resolved
                     .OrderBy(r => r.IsWatched ? 1 : 0)
@@ -193,7 +253,7 @@ namespace WatchedPlaylistCleaner
 
                 WriteM3U(m3uPath, sorted);
 
-                // Find the playlist item and refresh it directly for faster UI update
+                // Find the playlist item and refresh directly for faster UI update
                 var playlistItem = _libraryManager
                     .GetItemList(new InternalItemsQuery
                     {
@@ -214,14 +274,12 @@ namespace WatchedPlaylistCleaner
                 else
                 {
                     _libraryMonitor.ReportFileSystemChanged(m3uPath);
-                    Log($"  Playlist item not found — falling back to file system notification");
+                    LogWarning($"  Playlist item not found in library — falling back to file system notification");
                 }
-
-                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
-                Log($"  ERROR reordering '{m3uPath}' for '{user.Name}': {ex.Message}");
+                LogError($"Error reordering '{m3uPath}' for user '{user.Name}'", ex);
             }
         }
 

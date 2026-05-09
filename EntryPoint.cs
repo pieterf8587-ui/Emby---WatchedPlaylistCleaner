@@ -17,11 +17,9 @@ namespace WatchedPlaylistCleaner
         private readonly PlaylistCleaner _cleaner;
         private readonly ILogger _logger;
 
-        // Debounce fields — prevents multiple rapid events from triggering
-        // simultaneous runs when adding several items to a playlist at once
         private CancellationTokenSource? _debounceCts;
         private readonly object _debounceLock = new object();
-        private const int DebounceMilliseconds = 10000; // Wait 10 seconds after last event
+        private const int DebounceMilliseconds = 10000;
 
         public EntryPoint(
             IUserDataManager userDataManager,
@@ -44,60 +42,48 @@ namespace WatchedPlaylistCleaner
             _userDataManager.UserDataSaved += OnUserDataSaved;
             _libraryManager.ItemAdded += OnLibraryItemChanged;
             _libraryManager.ItemUpdated += OnLibraryItemChanged;
-            _logger.Info("[WatchedPlaylistCleaner] Plugin started — subscribed to UserDataSaved, ItemAdded and ItemUpdated events.");
+
+            // Log version and startup info for easy diagnosis in bug reports
+            var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+            _logger.Info($"[WatchedPlaylistCleaner] v{version} started — subscribed to UserDataSaved, ItemAdded and ItemUpdated events.");
         }
 
-        /// <summary>
-        /// Fires when a playlist item is added or updated.
-        /// Uses a debounce so that adding multiple items rapidly only triggers one resort.
-        /// </summary>
         private void OnLibraryItemChanged(object? sender, ItemChangeEventArgs e)
         {
             if (e.Item is not Playlist)
                 return;
 
-            _logger.Info($"[WatchedPlaylistCleaner] Playlist changed: {e.Item.Name} — scheduling debounced resort");
+            _logger.Info($"[WatchedPlaylistCleaner] Playlist changed: '{e.Item.Name}' — scheduling debounced resort");
 
             lock (_debounceLock)
             {
-                // Cancel any previously scheduled run
                 _debounceCts?.Cancel();
                 _debounceCts?.Dispose();
                 _debounceCts = new CancellationTokenSource();
                 var token = _debounceCts.Token;
 
-                // Schedule a new run after the debounce delay
                 Task.Delay(DebounceMilliseconds, token).ContinueWith(t =>
                 {
-                    if (!t.IsCanceled)
+                    if (t.IsCanceled) return;
+
+                    _logger.Info("[WatchedPlaylistCleaner] Debounce complete — running initial resort");
+                    _ = _cleaner.CleanAllPlaylistsForAllUsers(new Progress<double>(), CancellationToken.None);
+
+                    Task.Delay(30000).ContinueWith(_ =>
                     {
-                        _logger.Info("[WatchedPlaylistCleaner] Debounce complete — running resort for all users");
+                        _logger.Info("[WatchedPlaylistCleaner] Running safety net resort");
                         _ = _cleaner.CleanAllPlaylistsForAllUsers(new Progress<double>(), CancellationToken.None);
-                    }
+                    });
                 }, token);
             }
         }
 
         private void OnUserDataSaved(object? sender, UserDataSaveEventArgs e)
         {
-            var itemName = e.Item?.Name ?? "unknown";
-            var reason = e.SaveReason.ToString();
-            var played = e.UserData?.Played.ToString() ?? "null";
-            var userName = e.User?.Name ?? "unknown";
+            // Log ALL events at Debug level only — avoids flooding the main Emby log
+            _logger.Debug($"[WatchedPlaylistCleaner] UserDataSaved — Item: '{e.Item?.Name ?? "unknown"}' | Reason: {e.SaveReason} | Played: {e.UserData?.Played} | User: {e.User?.Name ?? "unknown"}");
 
-            _logger.Info($"[WatchedPlaylistCleaner] UserDataSaved fired — Item: '{itemName}' | Reason: {reason} | Played: {played} | User: {userName}");
-
-            try
-            {
-                var debugLine = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} UserDataSaved — Item: '{itemName}' | Reason: {reason} | Played: {played} | User: {userName}{Environment.NewLine}";
-                System.IO.File.AppendAllText(
-                    System.IO.Path.Combine(
-                        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                        "Emby-Server", "logs", "WatchedPlaylistCleaner_debug.txt"),
-                    debugLine);
-            }
-            catch { }
-
+            // Only act on watched/unplayed toggles and playback completion
             if (e.SaveReason != UserDataSaveReason.TogglePlayed &&
                 e.SaveReason != UserDataSaveReason.PlaybackFinished)
                 return;
@@ -110,8 +96,10 @@ namespace WatchedPlaylistCleaner
                 return;
 
             var userId = e.User.Id;
+            var userName = e.User?.Name ?? userId.ToString();
 
-            _logger.Info($"[WatchedPlaylistCleaner] Triggering resort for '{item.Name}'");
+            // Log at Info level only when we actually trigger a resort
+            _logger.Info($"[WatchedPlaylistCleaner] '{item.Name}' marked {(e.UserData.Played ? "watched" : "unwatched")} by '{userName}' — triggering resort");
 
             _ = _cleaner.RemoveWatchedItemFromAllPlaylists(item, userId, CancellationToken.None);
         }
@@ -121,6 +109,8 @@ namespace WatchedPlaylistCleaner
             _userDataManager.UserDataSaved -= OnUserDataSaved;
             _libraryManager.ItemAdded -= OnLibraryItemChanged;
             _libraryManager.ItemUpdated -= OnLibraryItemChanged;
+
+            _logger.Info("[WatchedPlaylistCleaner] Plugin disposed — unsubscribed from all events.");
 
             lock (_debounceLock)
             {
