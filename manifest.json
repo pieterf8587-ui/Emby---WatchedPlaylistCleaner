@@ -9,11 +9,11 @@
     "imageUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/thumb.png",
     "versions": [
       {
-        "version": "0.9.1.7",
-        "changelog": "Fix sort order for streaming episodes with identical release dates — uses season and episode number as tiebreakers. Add combined install/update setup script.",
+        "version": "0.9.1.8",
+        "changelog": "Add config file to control which playlists are managed by the plugin. Playlists not listed in the config file are left untouched.",
         "targetAbi": "4.8.0.0",
         "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
-        "checksum": "A7CD621AB246814CEA39C7581116E4A1",
+        "checksum": "E6AECCDBB25BE137B0CFF30F94198ED9",
         "timestamp": "2026-05-09T00:00:00Z"
       }
     ]
