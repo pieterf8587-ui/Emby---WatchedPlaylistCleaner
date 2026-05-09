@@ -31,6 +31,10 @@ namespace WatchedPlaylistCleaner
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Emby-Server", "logs", "WatchedPlaylistCleaner_debug.txt");
 
+        private static readonly string ConfigFile = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "Emby-Server", "programdata", "plugins", "WatchedPlaylistCleaner.config");
+
         // Maximum debug log size before it is trimmed (5 MB)
         private const long MaxLogBytes = 5 * 1024 * 1024;
 
@@ -77,6 +81,64 @@ namespace WatchedPlaylistCleaner
             _logger.ErrorException(message, ex);
         }
 
+        /// <summary>
+        /// Creates the config file if it doesn't exist yet, with instructions.
+        /// </summary>
+        private void EnsureConfigFileExists()
+        {
+            if (File.Exists(ConfigFile)) return;
+
+            var contents =
+                "# WatchedPlaylistCleaner - Managed Playlists" + Environment.NewLine +
+                "#" + Environment.NewLine +
+                "# Add the exact name of each playlist you want this plugin to sort," + Environment.NewLine +
+                "# one per line. Playlists not listed here will be left completely untouched." + Environment.NewLine +
+                "#" + Environment.NewLine +
+                "# Lines starting with # are comments and are ignored." + Environment.NewLine +
+                "# Playlist names are case-sensitive." + Environment.NewLine +
+                "#" + Environment.NewLine +
+                "# Example:" + Environment.NewLine +
+                "# Marvels Defenders Saga" + Environment.NewLine +
+                "# James Bond" + Environment.NewLine +
+                "# Mission Impossible" + Environment.NewLine;
+
+            try
+            {
+                File.WriteAllText(ConfigFile, contents);
+                Log($"Config file created at: {ConfigFile}");
+                Log("Please edit it to add the playlists you want managed.");
+            }
+            catch (Exception ex)
+            {
+                LogError("Could not create config file", ex);
+            }
+        }
+
+        /// <summary>
+        /// Reads the config file and returns the list of managed playlist names.
+        /// Returns null if the config file is empty or has no entries,
+        /// meaning no playlists will be processed.
+        /// </summary>
+        private HashSet<string> GetManagedPlaylistNames()
+        {
+            EnsureConfigFileExists();
+
+            if (!File.Exists(ConfigFile))
+                return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var names = File.ReadAllLines(ConfigFile)
+                .Where(l => !string.IsNullOrWhiteSpace(l) && !l.TrimStart().StartsWith("#"))
+                .Select(l => l.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (names.Count == 0)
+                Log("Config file has no playlist entries — no playlists will be processed. Add playlist names to: " + ConfigFile);
+            else
+                Log($"Managing {names.Count} playlist(s): {string.Join(", ", names)}");
+
+            return names;
+        }
+
         public PlaylistCleaner(
             ILibraryManager libraryManager,
             IPlaylistManager playlistManager,
@@ -92,6 +154,9 @@ namespace WatchedPlaylistCleaner
             _libraryMonitor = libraryMonitor;
             _fileSystem = fileSystem;
             _logger = logManager.GetLogger(Plugin.Instance.Name);
+
+            // Create config file on first run if it doesn't exist
+            EnsureConfigFileExists();
         }
 
         // -----------------------------------------------------------------------
@@ -111,8 +176,18 @@ namespace WatchedPlaylistCleaner
 
             Log($"'{item.Name}' played status changed for user '{user.Name}' — resorting their playlists");
 
-            var playlists = GetPlaylistsForUser(user);
-            Log($"Found {playlists.Count} playlist(s) for user '{user.Name}'");
+            var managedPlaylists = GetManagedPlaylistNames();
+            if (managedPlaylists.Count == 0)
+            {
+                Log("No playlists configured — nothing to do. Edit the config file to add playlists.");
+                return;
+            }
+
+            var playlists = GetPlaylistsForUser(user)
+                .Where(p => managedPlaylists.Contains(Path.GetFileNameWithoutExtension(p)))
+                .ToList();
+
+            Log($"Found {playlists.Count} managed playlist(s) for user '{user.Name}'");
 
             foreach (var m3uPath in playlists)
             {
@@ -133,6 +208,14 @@ namespace WatchedPlaylistCleaner
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
             Log($"Plugin version: {version}");
 
+            var managedPlaylists = GetManagedPlaylistNames();
+            if (managedPlaylists.Count == 0)
+            {
+                Log("No playlists configured — nothing to do. Edit the config file to add playlists.");
+                Log("=== Scheduled playlist reorder finished ===");
+                return;
+            }
+
             var users = _userManager.GetUserList(new UserQuery());
             Log($"Found {users.Length} user(s)");
 
@@ -141,8 +224,15 @@ namespace WatchedPlaylistCleaner
             {
                 Log($"Processing user: {user.Name}");
 
-                var playlists = GetPlaylistsForUser(user);
-                Log($"  Found {playlists.Count} playlist(s)");
+                var allPlaylists = GetPlaylistsForUser(user);
+                var playlists = allPlaylists
+                    .Where(p => managedPlaylists.Contains(Path.GetFileNameWithoutExtension(p)))
+                    .ToList();
+
+                int skipped = allPlaylists.Count - playlists.Count;
+                if (skipped > 0)
+                    Log($"  Skipping {skipped} unmanaged playlist(s) for '{user.Name}'");
+                Log($"  Found {playlists.Count} managed playlist(s)");
 
                 foreach (var m3uPath in playlists)
                 {
