@@ -115,28 +115,45 @@ namespace WatchedPlaylistCleaner
         }
 
         /// <summary>
-        /// Reads the config file and returns the list of managed playlist names.
-        /// Returns null if the config file is empty or has no entries,
-        /// meaning no playlists will be processed.
+        /// Returns the set of playlist names to manage.
+        /// Reads from plugin configuration first, falls back to text file if config is empty.
         /// </summary>
         private HashSet<string> GetManagedPlaylistNames()
         {
+            // First try plugin configuration (set via the Emby dashboard settings page)
+            var configNames = Plugin.Instance.Configuration.ManagedPlaylists;
+            if (!string.IsNullOrWhiteSpace(configNames))
+            {
+                var names = configNames
+                    .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(l => l.Trim())
+                    .Where(l => !string.IsNullOrEmpty(l))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                if (names.Count > 0)
+                {
+                    Log($"Managing {names.Count} playlist(s) from plugin config: {string.Join(", ", names)}");
+                    return names;
+                }
+            }
+
+            // Fall back to text config file
             EnsureConfigFileExists();
 
             if (!File.Exists(ConfigFile))
                 return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            var names = File.ReadAllLines(ConfigFile)
+            var fileNames = File.ReadAllLines(ConfigFile)
                 .Where(l => !string.IsNullOrWhiteSpace(l) && !l.TrimStart().StartsWith("#"))
                 .Select(l => l.Trim())
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            if (names.Count == 0)
-                Log("Config file has no playlist entries — no playlists will be processed. Add playlist names to: " + ConfigFile);
+            if (fileNames.Count == 0)
+                Log("No playlists configured in plugin settings or config file — nothing to process. Add playlist names via Dashboard > Plugins > Watched Playlist Cleaner > Settings.");
             else
-                Log($"Managing {names.Count} playlist(s): {string.Join(", ", names)}");
+                Log($"Managing {fileNames.Count} playlist(s) from config file: {string.Join(", ", fileNames)}");
 
-            return names;
+            return fileNames;
         }
 
         public PlaylistCleaner(
