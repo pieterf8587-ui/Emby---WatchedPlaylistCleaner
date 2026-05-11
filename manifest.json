@@ -9,11 +9,11 @@
     "imageUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/thumb.png",
     "versions": [
       {
-        "version": "0.9.2.0",
-        "changelog": "Production logging cleanup — routine messages demoted to Debug to keep the main Emby log clean.",
+        "version": "0.9.2.1",
+        "changelog": "Skip sorting during library scans to prevent conflicts — checks IsScanRunning at event trigger, after debounce, and at safety net.",
         "targetAbi": "4.8.0.0",
         "sourceUrl": "https://raw.githubusercontent.com/pieterf8587-ui/Emby---WatchedPlaylistCleaner/main/WatchedPlaylistCleaner.dll",
-        "checksum": "042DE1092B50A8565CEEBA53F6392B6A",
+        "checksum": "D3B7F90D0820E037E95A96C7B73DBD04",
         "timestamp": "2026-05-09T00:00:00Z"
       }
     ]
