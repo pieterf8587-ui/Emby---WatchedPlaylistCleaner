@@ -53,7 +53,15 @@ namespace WatchedPlaylistCleaner
             if (e.Item is not Playlist)
                 return;
 
-            _logger.Info($"[WatchedPlaylistCleaner] Playlist changed: '{e.Item.Name}' — scheduling debounced resort");
+            // Never run during a library scan — scans trigger many ItemAdded/ItemUpdated
+            // events which cause conflicts and unnecessary sorting
+            if (_libraryManager.IsScanRunning)
+            {
+                _logger.Debug("[WatchedPlaylistCleaner] Library scan in progress — skipping playlist resort");
+                return;
+            }
+
+            _logger.Debug($"[WatchedPlaylistCleaner] Playlist changed: '{e.Item.Name}' — scheduling debounced resort");
 
             lock (_debounceLock)
             {
@@ -66,12 +74,24 @@ namespace WatchedPlaylistCleaner
                 {
                     if (t.IsCanceled) return;
 
-                    _logger.Info("[WatchedPlaylistCleaner] Debounce complete — running initial resort");
+                    // Check again after debounce in case scan started during the wait
+                    if (_libraryManager.IsScanRunning)
+                    {
+                        _logger.Debug("[WatchedPlaylistCleaner] Library scan started during debounce — skipping resort");
+                        return;
+                    }
+
+                    _logger.Debug("[WatchedPlaylistCleaner] Debounce complete — running initial resort");
                     _ = _cleaner.CleanAllPlaylistsForAllUsers(new Progress<double>(), CancellationToken.None);
 
                     Task.Delay(30000).ContinueWith(_ =>
                     {
-                        _logger.Info("[WatchedPlaylistCleaner] Running safety net resort");
+                        if (_libraryManager.IsScanRunning)
+                        {
+                            _logger.Debug("[WatchedPlaylistCleaner] Library scan in progress — skipping safety net resort");
+                            return;
+                        }
+                        _logger.Debug("[WatchedPlaylistCleaner] Running safety net resort");
                         _ = _cleaner.CleanAllPlaylistsForAllUsers(new Progress<double>(), CancellationToken.None);
                     });
                 }, token);
@@ -80,7 +100,6 @@ namespace WatchedPlaylistCleaner
 
         private void OnUserDataSaved(object? sender, UserDataSaveEventArgs e)
         {
-            // Log ALL events at Debug level only — avoids flooding the main Emby log
             _logger.Debug($"[WatchedPlaylistCleaner] UserDataSaved — Item: '{e.Item?.Name ?? "unknown"}' | Reason: {e.SaveReason} | Played: {e.UserData?.Played} | User: {e.User?.Name ?? "unknown"}");
 
             // Only act on watched/unplayed toggles and playback completion
@@ -95,11 +114,17 @@ namespace WatchedPlaylistCleaner
             if (item == null)
                 return;
 
+            // Never run during a library scan
+            if (_libraryManager.IsScanRunning)
+            {
+                _logger.Debug("[WatchedPlaylistCleaner] Library scan in progress — skipping resort triggered by user data change");
+                return;
+            }
+
             var userId = e.User.Id;
             var userName = e.User?.Name ?? userId.ToString();
 
-            // Log at Info level only when we actually trigger a resort
-            _logger.Info($"[WatchedPlaylistCleaner] '{item.Name}' marked {(e.UserData.Played ? "watched" : "unwatched")} by '{userName}' — triggering resort");
+            _logger.Debug($"[WatchedPlaylistCleaner] '{item.Name}' marked {(e.UserData.Played ? "watched" : "unwatched")} by '{userName}' — triggering resort");
 
             _ = _cleaner.RemoveWatchedItemFromAllPlaylists(item, userId, CancellationToken.None);
         }
