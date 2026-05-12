@@ -113,6 +113,8 @@ After installing, run the scheduled task once to sort any playlists that existed
 2. Find **"Clean Watched Items from Playlists"**
 3. Click the **Run (▶)** button
 
+To change the scheduled run time or disable the task entirely, click directly on the task name to expand it. From there you can remove existing triggers using the **minus (−)** button, change the time by adding a new trigger with **Add Trigger**, or disable the task completely by removing all triggers.
+
 ---
 
 ## How Sorting Works
@@ -177,7 +179,7 @@ Run the scheduled task manually from **Dashboard → Scheduled Tasks → Clean W
 
 ## Version
 
-Current version: **0.9.2.1**
+Current version: **0.9.2.2**
 
 ---
 
