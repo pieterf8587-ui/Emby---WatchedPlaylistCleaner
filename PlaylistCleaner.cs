@@ -360,6 +360,15 @@ namespace WatchedPlaylistCleaner
                 if (missingDateCount > 0)
                     LogWarning($"  {missingDateCount} item(s) in '{Path.GetFileName(m3uPath)}' have no release date — sorted to top of their group");
 
+                // If more than 20% of items are missing, the library is likely mid-scan
+                // Skip the sort to avoid reordering with incomplete data
+                double missingPercent = entries.Count > 0 ? (double)notFoundCount / entries.Count : 0;
+                if (missingPercent > 0.2)
+                {
+                    Log($"  '{Path.GetFileName(m3uPath)}': {notFoundCount}/{entries.Count} items missing ({missingPercent:P0}) — library likely mid-scan, skipping sort");
+                    return;
+                }
+
                 var sorted = resolved
                     .OrderBy(r => r.IsWatched ? 1 : 0)
                     .ThenBy(r => r.ReleaseDate)
